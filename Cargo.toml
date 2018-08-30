@@ -1,0 +1,8 @@
+[package]
+name = "rust-example"
+version = "0.1.0"
+authors = ["Denis Bazhenov <dotsid@gmail.com>"]
+
+[dependencies]
+clap = "^2.32.0"
+md5 = "^0.3.8"
