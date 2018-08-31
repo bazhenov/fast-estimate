@@ -28,7 +28,9 @@ impl LinearCounter {
   }
 
   pub fn estimate(&self) -> u32 {
-    0
+    let l: f64 = self.buffer.len() as f64;
+    let Nf: f64 = l - self.population_count() as f64;
+    return (l * (l / Nf).ln()).round() as u32;
   }
 
   fn buffer_idx(&self, digest: &md5::Digest) -> usize {
@@ -50,7 +52,7 @@ impl LinearCounter {
         r += ((byte >> j) & 1) as u32;
       }
     }
-    r
+    return r
   }
 }
 
@@ -60,15 +62,28 @@ mod tests {
   use super::*;
 
   #[test]
-  fn it_works() {
+  fn population_count() {
     for i in 1..10 {
-      let mut lc = LinearCounter::new(100000);
+      let mut lc = LinearCounter::new(1000);
       for j in 0..i {
         let mut s = "str".to_string();
         s.push_str(&j.to_string());
         lc.offer(&s);
       }
       assert_eq!(lc.population_count(), i);
+    }
+  }
+
+  #[test]
+  fn estimate() {
+    for i in 1..10 {
+      let mut lc = LinearCounter::new(10000);
+      for j in 0..i {
+        let mut s = "str".to_string();
+        s.push_str(&j.to_string());
+        lc.offer(&s);
+      }
+      assert_eq!(lc.estimate(), i);
     }
   }
 
