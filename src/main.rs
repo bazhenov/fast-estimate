@@ -5,11 +5,6 @@ mod LinearCounter;
 use clap::{Arg, App};
 use std::io;
 
-#[derive(Debug)]
-struct LinearCounterConfig {
-  buffer_size: usize
-}
-
 fn main() {
   let matches = App::new("linear counter")
     .version("1.0")
@@ -23,9 +18,7 @@ fn main() {
 
   let buffer_size = value_t!(matches.value_of("size"), usize).unwrap_or_else(|e| e.exit());
 
-  let config = LinearCounterConfig { buffer_size: buffer_size };
-  let lc = LinearCounter::LinearCounter::new(config.buffer_size);
-  println!("{:?}", config);
+  let mut lc = LinearCounter::LinearCounter::new(buffer_size);
 
   let stdin = io::stdin();
   let mut line = String::new();
@@ -36,7 +29,7 @@ fn main() {
         if n <= 0 {
           break;
         }
-        println!("Line is: {:}", line.trim());
+        lc.offer(&line)
       }
       Err(e) => {
         panic!("{:?}", e)
@@ -44,5 +37,5 @@ fn main() {
     }
   }
 
-  //println!("{:2?}", lc.buffer)
+  println!("{:}", lc.estimate())
 }
