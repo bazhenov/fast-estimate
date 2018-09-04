@@ -12,8 +12,7 @@ impl LinearCounter {
     if size > MAX_BUFFER_SIZE {
       panic!("Too much of buffer")
     }
-    let mut buffer = vec![0; size];
-    LinearCounter { buffer: buffer }
+    LinearCounter { buffer: vec![0; size] }
   }
 
   pub fn offer(&mut self, s: &str) {
@@ -26,8 +25,8 @@ impl LinearCounter {
 
   pub fn estimate(&self) -> u32 {
     let l: f64 = self.buffer.len() as f64;
-    let Nf: f64 = l - self.population_count() as f64;
-    return (l * (l / Nf).ln()).round() as u32;
+    let nf: f64 = l - self.population_count() as f64;
+    return (l * (l / nf).ln()).round() as u32;
   }
 
   fn buffer_idx(&self, digest: &md5::Digest) -> usize {
@@ -94,14 +93,13 @@ mod tests {
 
   #[test]
   fn zero_lc() {
-    let mut lc = LinearCounter::new(1000);
+    let lc = LinearCounter::new(1000);
     assert_eq!(lc.population_count(), 0)
   }
 
 
   #[test]
   fn new_pop_count() {
-    let mut lc = LinearCounter::new(1000);
     assert_eq!(pop_count(0xFF0F0F00), 16)
   }
 }

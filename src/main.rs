@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate clap;
-mod LinearCounter;
+mod linear_counter;
 
 use clap::{Arg, App};
 use std::io;
@@ -13,12 +13,13 @@ fn main() {
       .short("s")
       .long("sz")
       .help("Set the size of buffer")
+      .default_value("100000")
       .takes_value(true))
     .get_matches();
 
-  let buffer_size = value_t!(matches.value_of("size"), usize).unwrap_or_else(|e| e.exit());
+  let buffer_size = value_t!(matches, "size", usize).unwrap_or_else(|e| e.exit());
 
-  let mut lc = LinearCounter::LinearCounter::new(buffer_size);
+  let mut lc = linear_counter::LinearCounter::new(buffer_size);
 
   let stdin = io::stdin();
   let mut line = String::new();
