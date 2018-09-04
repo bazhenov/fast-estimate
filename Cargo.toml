@@ -1,5 +1,5 @@
 [package]
-name = "rust-example"
+name = "est"
 version = "0.1.0"
 authors = ["Denis Bazhenov <dotsid@gmail.com>"]
 
