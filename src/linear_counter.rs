@@ -1,5 +1,12 @@
 extern crate md5;
 
+/// Linear counting structure
+///
+/// Basically linear counter is the bit array. Each incoming item is associated with single bit
+/// using hash function.
+///
+/// Detailed explanation of the algorithm: [A Linear-Time Probabilistic Counting Algorithm
+/// for Database Applications](http://dblab.kaist.ac.kr/Prof/pdf/ACM90_TODS_v15n2.pdf)
 pub struct LinearCounter {
   buffer: Vec<u32>
 }
@@ -15,21 +22,26 @@ impl LinearCounter {
     LinearCounter { buffer: vec![0; size] }
   }
 
+  /// Updates a counter with given string
   pub fn offer(&mut self, s: &str) {
     let digest = md5::compute(s);
-    let bit_idx = self.buffer_idx(&digest);
-    let bit_offset = bit_idx & 31;
+    let bit_idx = self.calculate_bit_idx(&digest);
+
+    // Use first 5 bits as bit offset and the rest as vector word (u32) offset
+    let bit_offset = bit_idx & 0b11111;
     let byte_offset = bit_idx >> 5;
     self.buffer[byte_offset] |= 1 << bit_offset;
   }
 
+  /// Estimates a number of unique elemnts given to the `offer` method
   pub fn estimate(&self) -> u32 {
     let l: f64 = self.buffer.len() as f64;
     let nf: f64 = l - self.population_count() as f64;
     return (l * (l / nf).ln()).round() as u32;
   }
 
-  fn buffer_idx(&self, digest: &md5::Digest) -> usize {
+  /// Calculate bit index in the buffer linked to given hash sum
+  fn calculate_bit_idx(&self, digest: &md5::Digest) -> usize {
     let mut num = digest[0] as usize;
     num <<= 8;
     num |= digest[1] as usize;
@@ -37,7 +49,7 @@ impl LinearCounter {
     num |= digest[2] as usize;
     num <<= 8;
     num |= digest[3] as usize;
-    return num % self.buffer.len();
+    return num % (self.buffer.len() * 32);
   }
 
   fn population_count(&self) -> u32 {
@@ -54,6 +66,7 @@ impl LinearCounter {
   }
 }
 
+#[inline]
 fn pop_count(i: u32) -> u32 {
   let mut i: u32 = i - ((i >> 1) & 0x55555555);
   i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
@@ -100,6 +113,8 @@ mod tests {
 
   #[test]
   fn new_pop_count() {
-    assert_eq!(pop_count(0xFF0F0F00), 16)
+    assert_eq!(pop_count(0x00000000), 0);
+    assert_eq!(pop_count(0xFFFFFFFF), 32);
+    assert_eq!(pop_count(0xFF0F0F00), 16);
   }
 }

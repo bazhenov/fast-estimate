@@ -1,18 +1,19 @@
 #[macro_use]
 extern crate clap;
-mod linear_counter;
+pub mod linear_counter;
 
 use clap::{Arg, App};
 use std::io;
 
+/// Main function asda
 fn main() {
   let matches = App::new("linear counter")
     .version("1.0")
     .about("Estimating using linear counting")
     .arg(Arg::with_name("size")
       .short("s")
-      .long("sz")
-      .help("Set the size of buffer")
+      .long("size")
+      .help("Set the size of buffer (in 4 byte words)")
       .default_value("100000")
       .takes_value(true))
     .get_matches();
