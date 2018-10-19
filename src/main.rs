@@ -5,7 +5,6 @@ pub mod linear_counter;
 use clap::{Arg, App};
 use std::io;
 
-/// Main function asda
 fn main() {
   let matches = App::new("linear counter")
     .version("1.0")
