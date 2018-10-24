@@ -14,6 +14,7 @@ pub struct Bucket {
 pub struct Item {
   data: String,
   epsilon: u32,
+  count: u32
 }
 
 impl StreamSummary {
@@ -30,10 +31,11 @@ impl StreamSummary {
   }
 
   pub fn offer(&mut self, data: &str) -> bool {
-    self.monitored_items.entry(data.to_string()).or_insert_with(|| {
-      return Item { data: data.to_string(), epsilon: 0 };
+    let item = self.monitored_items.entry(data.to_string()).or_insert_with(|| {
+      return Item { data: data.to_string(), epsilon: 0, count: 0 };
     });
-    true
+    item.count += 1;
+    return item.count == 1;
   }
 }
 
