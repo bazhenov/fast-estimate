@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate clap;
 pub mod linear_counter;
+pub mod stream_summary;
 
 use clap::{Arg, App};
 use std::io;
