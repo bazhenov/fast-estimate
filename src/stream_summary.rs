@@ -55,13 +55,27 @@ impl StreamSummary {
 
     let count;
     {
-      /*let bucket = item.bucket.upgrade().unwrap();
+      let mut bucket = match item.bucket.upgrade() {
+        Some(r) => r,
+        None => panic!("Empty bucket reference on Item found")
+      };
+      match bucket.head.upgrade() {
+        Some(bucket_head) => {
+          if Rc::ptr_eq(&bucket_head, item) {
+            match Rc::get_mut(&mut bucket) {
+              Some(b) => b.head = Weak::new(),
+              None => panic!("Bucket can't be borrowed mutably")
+            }
+          }
+        },
+        None => panic!("Empty item reference on Bucket found")
+      }
       if Rc::ptr_eq(&bucket.head.upgrade().unwrap(), item) {
         match item.bucket.upgrade().as_mut() {
           Some(r) => Rc::get_mut(r).unwrap().head = Weak::new(),
           None => {}
         };
-      }*/
+      }
 
       println!("RC: strong: {}, weak: {}", Rc::strong_count(item), Rc::weak_count(item));
       let i = Rc::get_mut(item).unwrap();
@@ -71,7 +85,7 @@ impl StreamSummary {
     //let l = self.buckets.push_back(Bucket{});
     let bucket = get_bucket(&mut self.buckets, count);
     bucket.head = Rc::downgrade(&Rc::clone(&item));
-    item.bucket = Weak::new();
+    Rc::get_mut(item).unwrap().bucket = Weak::new();
     count
   }
 }
