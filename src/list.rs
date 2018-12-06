@@ -56,14 +56,12 @@ impl<T> List<T> {
       None => 0,
       Some(head) => {
         let mut count = 1;
-        let mut i: Link<T> = Some(Rc::clone(head));
-        while (*i.as_ref().unwrap().borrow()).next.is_some() {
+        let mut i: Rc<RefCell<Node<T>>> = Rc::clone(head);
+        while i.borrow().next.is_some() {
           i = {
             count += 1;
-            let rc = &i.as_ref().unwrap();
-            let ref_node = rc.borrow();
-            let ref n = (*ref_node).next;
-            Some(Rc::clone(n.as_ref().unwrap()))
+            let n = &i.borrow().next;
+            Rc::clone(n.as_ref().unwrap())
           };
         }
         count
