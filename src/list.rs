@@ -2,7 +2,6 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 pub struct List<T> {
-
   head: Link<T>,
   tail: Link<T>
 }
@@ -57,12 +56,15 @@ impl<T> List<T> {
       Some(head) => {
         let mut count = 1;
         let mut i: Rc<RefCell<Node<T>>> = Rc::clone(head);
-        while i.borrow().next.is_some() {
-          i = {
-            count += 1;
-            let n = &i.borrow().next;
-            Rc::clone(n.as_ref().unwrap())
+        loop {
+          let i_temp = match i.borrow().next {
+            Some(ref nx) => {
+              count += 1;
+              Rc::clone(nx)
+            }
+            None => { break; }
           };
+          i = i_temp;
         }
         count
       }
@@ -76,18 +78,11 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_a() {
+  fn list_can_report_size() {
     let mut l:List<u8> = List::new();
-    l.push_front(5);
-    l.push_front(6);
-    l.push_front(7);
-    assert_eq!(l.size(), 3);
-  }
-
-  #[test]
-  fn test_refcell() {
-    let rc: RefCell<u8> = RefCell::new(5);
-    rc.replace(8);
-    assert_eq!(8, *rc.borrow());
+    for i in 0..5 {
+      l.push_front(5);
+    }
+    assert_eq!(l.size(), 5);
   }
 }
