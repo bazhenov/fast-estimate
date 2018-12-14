@@ -1,3 +1,3 @@
 #!/bin/sh
 
-fswatch -i 0.3 src | grep --line-buffered ".rs$" |  xargs -n 1 -- sh -c "clear; cargo test -q list"
+fswatch -i 0.3 -0 src/*.rs | xargs -0 -n 1 -- sh -c "clear; echo 'Running tests...'; cargo test -q list"
