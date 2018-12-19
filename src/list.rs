@@ -60,8 +60,13 @@ impl<T: Copy> List<T> {
 			None => None,
 			Some(head) => {
 				let mut item = head.borrow_mut();
-				item.prev = None;
-				self.head = item.next.clone();
+				self.head = match item.next.take() {
+					None => None,
+					Some(next) => {
+						next.borrow_mut().prev = None;
+						Some(Rc::clone(&next))
+					}
+				};
 				Some(item.value)
 			}
 		}
@@ -112,7 +117,57 @@ mod tests {
 		assert_eq!(v, Some(5));
 	}
 
-	#[test]
+  #[derive(Debug)]
+  struct Nd {
+    n: Option<Rc<RefCell<Nd>>>,
+    p: Option<Rc<RefCell<Nd>>>,
+    v: u8
+  }
+
+  #[test]
+  fn test_pointers_equality() {
+    let a = Nd { n: None, p: None, v:1 };
+    let b = Nd { n: None, p: None, v:2 };
+    let c = Nd { n: None, p: None, v:3 };
+
+    let a_rc = Rc::new(RefCell::new(a));
+    let b_rc = Rc::new(RefCell::new(b));
+    let c_rc = Rc::new(RefCell::new(c));
+
+    a_rc.borrow_mut().n = Some(Rc::clone(&c_rc));
+    c_rc.borrow_mut().p = Some(Rc::clone(&a_rc));
+
+    print_list(&a_rc);
+
+    let before: Rc<RefCell<Nd>> = Rc::clone(&a_rc);
+    let after: Rc<RefCell<Nd>> = Rc::clone(&a_rc.borrow().n.as_ref().expect("Ooops"));
+
+    before.borrow_mut().n = Some(Rc::clone(&b_rc));
+    after.borrow_mut().p = Some(Rc::clone(&b_rc));
+    b_rc.borrow_mut().n = Some(Rc::clone(&c_rc));
+    b_rc.borrow_mut().p = Some(Rc::clone(&c_rc));
+
+    print_list(&a_rc);
+  }
+
+  fn print_list(head: &Rc<RefCell<Nd>>) {
+    let mut i = Some(Rc::clone(&head));
+    loop {
+      let i_temp = match i {
+        Some(ref nd) => {
+          print!("{:} -> ", nd.borrow().v);
+          nd.borrow().n.clone()
+        },
+        None => {
+          break
+        }
+      };
+      i = i_temp;
+    }
+    println!()
+  }
+
+	//#[test]
 	fn list_addresses() {
 		let mut l = List::new();
 		l.push_front(5);
@@ -120,6 +175,6 @@ mod tests {
 		let tail: &Rc<RefCell<Node<u8>>> = l.tail.as_ref().unwrap();
 		assert_eq!(ptr::eq(head, tail), true);
 		//println!("Head is: {:p}", l.head.unwrap());
-		//println!("Tail is: {:p}", l.tail.unwrap());
+		//println !("Tail is: {:p}", l.tail.unwrap());
 	}
 }
