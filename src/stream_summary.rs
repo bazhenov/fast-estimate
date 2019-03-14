@@ -130,15 +130,16 @@ mod tests {
 
   #[test]
   fn should_count_occurrences_correctly() {
-    let mut s = StreamSummary::new();
-    for i in 0..10 {
-      assert_eq!(i + 1, s.offer("Hello"));
-    }
+    //let mut s = StreamSummary::new();
+    // for i in 0..10 {
+    //   assert_eq!(i + 1, s.offer("Hello"));
+    // }
   }
 
   #[test]
   fn items_are_organized_in_ring() {
-
+    let a: Item = Item::new("foo");
+    let b: Item = Item::new("bar");
   }
 
   #[test]
