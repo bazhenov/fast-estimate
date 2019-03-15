@@ -24,6 +24,11 @@ impl NodeLink {
     NodeLink(Rc::new(RefCell::new(node)))
   }
 
+  fn new_standalone(value: &str) -> Self {
+    let node = Node { data: value.to_string(), next: None, prev: Weak::new() };
+    Self::new(node)
+  }
+
   fn borrow(&self) -> Ref<Node> {
     self.0.borrow()
   }
@@ -38,7 +43,7 @@ impl NodeLink {
 
   fn create_before(&mut self, value: &str) -> Self {
     let node = Node { data: value.to_string(), next: Some(self.clone()), prev: Weak::new() };
-    let link = NodeLink::new(node);
+    let link = Self::new(node);
     self.borrow_mut().prev = link.weak();
     link
   }
@@ -50,28 +55,20 @@ impl NodeLink {
     link
   }
 
-  fn upgrade_prev(&self) -> Option<NodeLink> {
-    self.0.borrow().prev.upgrade().map(NodeLink)
+  fn next_link(&self) -> Option<Self> {
+    self.0.borrow().next.as_ref().map(Self::clone)
+  }
+
+  fn upgrade_prev(&self) -> Option<Self> {
+    self.0.borrow().prev.upgrade().map(Self)
   }
 }
 
 impl Clone for NodeLink {
 
-  fn clone(&self) -> NodeLink {
-    NodeLink(Rc::clone(&self.0))
+  fn clone(&self) -> Self {
+    Self(Rc::clone(&self.0))
   }
-}
-
-impl Node {
-
-  fn new_standalone(value: &str) -> NodeLink {
-    let node = Node { data: value.to_string(), next: None, prev: Weak::new() };
-    NodeLink::new(node)
-  }
-}
-
-fn clone_link(link: &Link) -> Link {
-  link.as_ref().map(NodeLink::clone)
 }
 
 impl DoublyLinkedList {
@@ -88,9 +85,9 @@ impl DoublyLinkedList {
     let new_tail = if let Some(ref mut old_tail) = self.tail {
       old_tail.create_after(value)
     } else {
-      let head = Node::new_standalone(value);
+      let head = NodeLink::new_standalone(value);
       self.head = Some(head.clone());
-      head.clone()
+      head
     };
     self.tail = Some(new_tail.clone());
     new_tail
@@ -100,7 +97,7 @@ impl DoublyLinkedList {
     let new_head : NodeLink = if let Some(ref mut old_head) = self.head  {
       old_head.create_before(value)
     } else {
-      let head = Node::new_standalone(value);
+      let head = NodeLink::new_standalone(value);
       // updating tail beacause it's the first element in the list
       self.tail = Some(head.clone());
       head
@@ -111,7 +108,7 @@ impl DoublyLinkedList {
 
   fn pop_front(&mut self) -> Option<String> {
     let (value, new_head) = if let Some(ref old_head) = self.head {
-      (Some(old_head.borrow().data.clone()), clone_link(&old_head.borrow().next))
+      (Some(old_head.borrow().data.clone()), old_head.next_link())
     } else {
       (None, None)
     };
@@ -222,8 +219,7 @@ mod tests {
     let mut list = DoublyLinkedList::new();
     list.push_front("world");
     list.push_front("Hello");
-    let vector: Vec<String> = list.iter().collect();
-    assert_eq!("Hello, world", vector.join(", "));
+    assert_eq!("Hello, world", list_as_string(&list, ", "));
   }
 
   #[test]
@@ -295,6 +291,10 @@ mod tests {
     // 2 refs here: first element referencing second and "node" binding itself.
     list.push_back("third");
     assert_eq!(2, Rc::strong_count(&node.0));
+  }
+
+  fn list_as_string(list: &DoublyLinkedList, separator: &str) -> String {
+    list.iter().collect::<Vec<String>>().join(separator)
   }
 
   fn assert_empty(list: &mut DoublyLinkedList) {
