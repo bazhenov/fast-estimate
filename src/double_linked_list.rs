@@ -85,6 +85,13 @@ impl NodeLink {
   fn ptr_eq(&self, other: &Self) -> bool {
     Rc::ptr_eq(&self.0, &other.0)
   }
+
+  fn ptr_eq_and_present(&self, other: &Option<Self>) -> bool {
+    if let Some(ref node) = other {
+      return Rc::ptr_eq(&self.0, &node.0);
+    }
+    false
+  }
 }
 
 impl Clone for NodeLink {
@@ -138,11 +145,25 @@ impl DoublyLinkedList {
   }
 
   fn push_after(&mut self, node: &NodeLink, value: &str) -> NodeLink {
-    node.create_after(value)
+    let new = node.create_after(value);
+
+    // Updating tail if pushing after last element of a list
+    if node.ptr_eq_and_present(&self.tail) {
+      self.tail = Some(new.clone())
+    }
+
+    new
   }
 
   fn push_before(&mut self, node: &NodeLink, value: &str) -> NodeLink {
-    node.create_before(value)
+    let new = node.create_before(value);
+
+    // Updates head if pushing before first element in a list
+    if node.ptr_eq_and_present(&self.head) {
+      self.head = Some(new.clone());
+    }
+
+    new
   }
 
   fn pop_front(&mut self) -> Option<String> {
@@ -225,8 +246,24 @@ mod tests {
   fn one_element_get_head_and_tail() {
     let mut list = DoublyLinkedList::new();
     let node = list.push_back("hello");
-    assert!(node.ptr_eq(list.head().as_ref().unwrap()));
-    assert!(node.ptr_eq(list.tail().as_ref().unwrap()));
+    assert!(node.ptr_eq_and_present(&list.head()));
+    assert!(node.ptr_eq_and_present(&list.tail()));
+  }
+
+  #[test]
+  fn push_after_updates_tail() {
+    let mut list = DoublyLinkedList::new();
+    let head = list.push_back("hello");
+    let tail = list.push_after(&head, "world");
+    assert!(tail.ptr_eq_and_present(&list.tail()));
+  }
+
+  #[test]
+  fn push_before_updates_head() {
+    let mut list = DoublyLinkedList::new();
+    let tail = list.push_back("hello");
+    let head = list.push_before(&tail, "world");
+    assert!(head.ptr_eq_and_present(&list.head()));
   }
 
   #[test]
