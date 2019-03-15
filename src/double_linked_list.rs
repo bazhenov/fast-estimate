@@ -231,6 +231,17 @@ mod tests {
   }
 
   #[test]
+  fn links_should_be_updated() {
+    let mut list = DoublyLinkedList::new();
+    let head = list.push_front("hello");
+
+    assert!(head.borrow().next.is_none());
+    let tail = list.push_back("world");
+
+    assert!(Rc::ptr_eq(&tail, head.borrow().next.as_ref().unwrap()));
+  }
+
+  #[test]
   fn check_rc_links_count() {
     let mut list = DoublyLinkedList::new();
     let node = list.push_back("first");
