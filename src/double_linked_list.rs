@@ -41,18 +41,37 @@ impl NodeLink {
     Rc::downgrade(&self.0)
   }
 
-  fn create_before(&mut self, value: &str) -> Self {
-    let node = Node { data: value.to_string(), next: Some(self.clone()), prev: Weak::new() };
-    let link = Self::new(node);
-    self.borrow_mut().prev = link.weak();
-    link
+  fn next(&self) -> Option<NodeLink> {
+    self.borrow().next.as_ref().map(NodeLink::clone)
   }
 
-  fn create_after(&mut self, value: &str) -> Self {
+  fn update_backward_link(&self, node: &NodeLink) {
+    self.borrow_mut().prev = node.weak();
+  }
+
+  fn link_to(&self, successor: &NodeLink) {
+    self.borrow_mut().next = Some(successor.clone());
+    successor.borrow_mut().prev = self.weak();
+  }
+
+  fn create_before(&self, value: &str) -> Self {
+    let node = Node { data: value.to_string(), next: Some(self.clone()), prev: Weak::new() };
+    let new = Self::new(node);
+    if let Some(ref prev) = self.upgrade_prev() {
+      prev.link_to(&new);
+    }
+    new.link_to(self);
+    new
+  }
+
+  fn create_after(&self, value: &str) -> Self {
     let node = Node { data: value.to_string(), next: None, prev: self.weak() };
-    let link = NodeLink::new(node);
-    self.borrow_mut().next = Some(link.clone());
-    link
+    let new = Self::new(node);
+    if let Some(ref next) = self.0.borrow().next {
+      new.link_to(next)
+    }
+    self.link_to(&new);
+    new
   }
 
   fn next_link(&self) -> Option<Self> {
@@ -61,6 +80,10 @@ impl NodeLink {
 
   fn upgrade_prev(&self) -> Option<Self> {
     self.0.borrow().prev.upgrade().map(Self)
+  }
+
+  fn ptr_eq(&self, other: &Self) -> bool {
+    Rc::ptr_eq(&self.0, &other.0)
   }
 }
 
@@ -79,6 +102,14 @@ impl DoublyLinkedList {
 
   fn iter(&self) -> DoublyLinkedListIterator {
     DoublyLinkedListIterator { item: self.head.as_ref().map(NodeLink::clone) }
+  }
+
+  fn head(&self) -> Option<NodeLink> {
+    self.head.clone()
+  }
+
+  fn tail(&self) -> Option<NodeLink> {
+    self.tail.clone()
   }
 
   fn push_back(&mut self, value: &str) -> NodeLink {
@@ -104,6 +135,14 @@ impl DoublyLinkedList {
     };
     self.head = Some(new_head.clone());
     new_head
+  }
+
+  fn push_after(&mut self, node: &NodeLink, value: &str) -> NodeLink {
+    node.create_after(value)
+  }
+
+  fn push_before(&mut self, node: &NodeLink, value: &str) -> NodeLink {
+    node.create_before(value)
   }
 
   fn pop_front(&mut self) -> Option<String> {
@@ -180,6 +219,14 @@ mod tests {
   fn empty_size() {
     let mut list = DoublyLinkedList::new();
     assert_empty(&mut list);
+  }
+
+  #[test]
+  fn one_element_get_head_and_tail() {
+    let mut list = DoublyLinkedList::new();
+    let node = list.push_back("hello");
+    assert!(node.ptr_eq(list.head().as_ref().unwrap()));
+    assert!(node.ptr_eq(list.tail().as_ref().unwrap()));
   }
 
   #[test]
@@ -276,6 +323,31 @@ mod tests {
   }
 
   #[test]
+  fn push_after() {
+    let mut list = DoublyLinkedList::new();
+    list.push_back("world");
+    let head = list.push_front("Brave");
+    list.push_after(&head, "new");
+
+    assert_eq!("Brave new world", list_as_string(&list, " "));
+  }
+
+  #[test]
+  fn push_before() {
+    let mut list = DoublyLinkedList::new();
+    let tail = list.push_back("world");
+    list.push_front("Brave");
+    list.push_before(&tail, "new");
+
+    assert_eq!("Brave new world", list_as_string(&list, " "));
+  }
+
+  // #[test]
+  // fn push_before_updates_root() {
+  //   let mut
+  // }
+
+  #[test]
   fn check_rc_links_count() {
     let mut list = DoublyLinkedList::new();
     let node = list.push_back("first");
@@ -301,5 +373,7 @@ mod tests {
     assert_eq!(0, list.len());
     assert_eq!(None, list.pop_front());
     assert_eq!(None, list.pop_back());
+    assert!(list.head().is_none());
+    assert!(list.tail().is_none());
   }
 }
