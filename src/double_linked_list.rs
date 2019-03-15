@@ -161,7 +161,7 @@ impl Iterator for DoublyLinkedListIterator {
   fn next(&mut self) -> Option<Self::Item> {
     let(ret, next) = match self.item {
       Some(ref i) => {
-        let r: Ref<Node> = i.borrow();
+        let r = i.borrow();
         (Some(r.data.clone()), r.next.as_ref().map(NodeLink::clone))
       },
       None => (None, None)
