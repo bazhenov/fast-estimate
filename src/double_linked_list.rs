@@ -3,7 +3,7 @@ use std::cell::RefCell;
 
 type Link = Option<Rc<RefCell<Node>>>;
 
-struct DoublyLinkedList {
+pub struct DoublyLinkedList {
 
   head: Link,
   tail: Link
@@ -99,7 +99,14 @@ impl DoublyLinkedList {
     value
   }
 
-  fn len(&self) -> usize {
+  /// Returns length of a list
+  ///
+  /// ```rust
+  /// let mut list = DoublyLinkedList::new();
+  /// list.push_back("Hello");
+  /// assert_eq!(2, list.len());
+  /// ```
+  pub fn len(&self) -> usize {
     self.iter().count()
   }
 }
@@ -132,8 +139,8 @@ mod tests {
 
   #[test]
   fn empty_size() {
-    let list = DoublyLinkedList::new();
-    assert_eq!(0, list.len());
+    let mut list = DoublyLinkedList::new();
+    assert_empty(&mut list);
   }
 
   #[test]
@@ -188,7 +195,7 @@ mod tests {
     let mut list = DoublyLinkedList::new();
     list.push_back("hello");
     assert_eq!("hello", list.pop_front().unwrap());
-    assert_eq!(0, list.len());
+    assert_empty(&mut list);
   }
 
   #[test]
@@ -198,7 +205,6 @@ mod tests {
     list.push_back("world");
     assert_eq!("hello", list.pop_front().unwrap());
     assert_eq!("world", list.pop_front().unwrap());
-    assert_eq!(0, list.len());
     assert_empty(&mut list);
   }
 
