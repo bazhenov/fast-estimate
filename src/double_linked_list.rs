@@ -51,8 +51,8 @@ impl DoublyLinkedList {
     DoublyLinkedListIterator { item: self.head.as_ref().map(Rc::clone) }
   }
 
-  fn push_back(&mut self, value: &str) {
-    self.tail = if let Some(ref old_tail) = self.tail {
+  fn push_back(&mut self, value: &str) -> Rc<RefCell<Node>> {
+    let new_tail = if let Some(ref old_tail) = self.tail {
       let new_tail = Node::new_tail(value, &self.tail);
       old_tail.borrow_mut().next = clone_link(&new_tail);
       new_tail
@@ -60,10 +60,12 @@ impl DoublyLinkedList {
       self.head = Node::new_standalone(value);
       clone_link(&self.head)
     };
+    self.tail = clone_link(&new_tail);
+    new_tail.unwrap()
   }
 
-  fn push_front(&mut self, value: &str) {
-    self.head = if let Some(ref old_head) = self.head  {
+  fn push_front(&mut self, value: &str) -> Rc<RefCell<Node>> {
+    let new_head = if let Some(ref old_head) = self.head  {
       let new_head = Node::new_head(value, &self.head);
       old_head.borrow_mut().prev = weak_link(&new_head);
       new_head
@@ -71,6 +73,8 @@ impl DoublyLinkedList {
       self.tail = Node::new_standalone(value);
       clone_link(&self.tail)
     };
+    self.head = clone_link(&new_head);
+    new_head.unwrap()
   }
 
   fn pop_front(&mut self) -> Option<String> {
@@ -214,6 +218,34 @@ mod tests {
     list.push_back("hello");
     assert_eq!("hello", list.pop_back().unwrap());
     assert_empty(&mut list);
+  }
+
+  #[test]
+  fn can_store_node() {
+    let mut list = DoublyLinkedList::new();
+    let node = list.push_front("hello");
+    assert_eq!("hello", node.borrow().data);
+
+    let node = list.push_back("world");
+    assert_eq!("world", node.borrow().data);
+  }
+
+  #[test]
+  fn check_rc_links_count() {
+    let mut list = DoublyLinkedList::new();
+    let node = list.push_back("first");
+
+    // We shold have 3 references at this point: head, tail and returned one (node)
+    assert_eq!(3, Rc::strong_count(&node));
+
+    // We still should have 3 refs: first element, tail of the list and "node"-binding
+    list.push_front("second");
+    assert_eq!(3, Rc::strong_count(&node));
+
+    // At this point tail reference is moved to another element. So we're expecting
+    // 2 refs here: first element referencing second and "node" binding itself.
+    list.push_back("third");
+    assert_eq!(2, Rc::strong_count(&node));
   }
 
   fn assert_empty(list: &mut DoublyLinkedList) {
