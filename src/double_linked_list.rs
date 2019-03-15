@@ -20,7 +20,7 @@ struct Node {
 
 impl NodeLink {
 
-  fn new(node: Node) -> NodeLink {
+  fn new(node: Node) -> Self {
     NodeLink(Rc::new(RefCell::new(node)))
   }
 
@@ -34,6 +34,20 @@ impl NodeLink {
 
   fn weak(&self) -> Weak<RefCell<Node>> {
     Rc::downgrade(&self.0)
+  }
+
+  fn create_before(&mut self, value: &str) -> Self {
+    let node = Node { data: value.to_string(), next: Some(self.clone()), prev: Weak::new() };
+    let link = NodeLink::new(node);
+    self.borrow_mut().prev = link.weak();
+    link
+  }
+
+  fn create_after(&mut self, value: &str) -> Self {
+    let node = Node { data: value.to_string(), next: None, prev: self.weak() };
+    let link = NodeLink::new(node);
+    self.borrow_mut().next = Some(link.clone());
+    link
   }
 
   fn upgrade_prev(&self) -> Option<NodeLink> {
@@ -54,24 +68,10 @@ impl Node {
     let node = Node { data: value.to_string(), next: None, prev: Weak::new() };
     NodeLink::new(node)
   }
-
-  fn new_tail(value: &str, old_tail: &Link) -> NodeLink {
-    let node = Node { data: value.to_string(), next: None, prev: weak_link(old_tail) };
-    NodeLink::new(node)
-  }
-
-  fn new_head(value: &str, old_head: &Link) -> NodeLink {
-    let node = Node { data: value.to_string(), next: clone_link(old_head), prev: Weak::new() };
-    NodeLink::new(node)
-  }
 }
 
 fn clone_link(link: &Link) -> Link {
   link.as_ref().map(NodeLink::clone)
-}
-
-fn weak_link(link: &Link) -> Weak<RefCell<Node>> {
-  link.as_ref().map(NodeLink::weak).unwrap()
 }
 
 impl DoublyLinkedList {
@@ -85,10 +85,8 @@ impl DoublyLinkedList {
   }
 
   fn push_back(&mut self, value: &str) -> NodeLink {
-    let new_tail = if let Some(ref old_tail) = self.tail {
-      let new_tail = Node::new_tail(value, &self.tail);
-      old_tail.borrow_mut().next = Some(new_tail.clone());
-      new_tail
+    let new_tail = if let Some(ref mut old_tail) = self.tail {
+      old_tail.create_after(value)
     } else {
       let head = Node::new_standalone(value);
       self.head = Some(head.clone());
@@ -99,10 +97,8 @@ impl DoublyLinkedList {
   }
 
   fn push_front(&mut self, value: &str) -> NodeLink {
-    let new_head : NodeLink = if let Some(ref old_head) = self.head  {
-      let new_head = Node::new_head(value, &self.head);
-      old_head.borrow_mut().prev = new_head.weak();
-      new_head
+    let new_head : NodeLink = if let Some(ref mut old_head) = self.head  {
+      old_head.create_before(value)
     } else {
       let head = Node::new_standalone(value);
       // updating tail beacause it's the first element in the list
@@ -120,7 +116,10 @@ impl DoublyLinkedList {
       (None, None)
     };
     self.head = new_head;
-    if self.head.is_none() {
+
+    if let Some(ref head) = self.head {
+      head.borrow_mut().prev = Weak::new();
+    } else {
       self.tail = None;
     }
     value
@@ -133,7 +132,10 @@ impl DoublyLinkedList {
       (None, None)
     };
     self.tail = new_tail;
-    if self.tail.is_none() {
+
+    if let Some(ref tail) = self.tail {
+      tail.borrow_mut().next = None;
+    } else {
       self.head = None;
     }
     value
