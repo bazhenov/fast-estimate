@@ -6,6 +6,24 @@ struct NodeLink(Rc<RefCell<Node>>);
 
 type Link = Option<NodeLink>;
 
+/// Double linked list.
+///
+/// Usage:
+/// ```
+/// let mut list = DoublyLinkedList::new();
+/// list.push_front("Hello");
+/// list.push_front("World");
+/// assert_eq!(2, list.len());
+/// ```
+///
+/// You could also iterate over list:
+/// ```
+/// let mut list = DoublyLinkedList::new();
+/// list.push_front("Hello");
+/// list.push_front("World");
+/// for item in list.iter() {
+/// }
+/// ```
 pub struct DoublyLinkedList {
 
   head: Link,
@@ -103,7 +121,8 @@ impl Clone for NodeLink {
 
 impl DoublyLinkedList {
 
-  fn new() -> DoublyLinkedList {
+  /// Creates new list
+  fn new() -> Self {
     DoublyLinkedList { head: None, tail: None }
   }
 
@@ -111,14 +130,17 @@ impl DoublyLinkedList {
     DoublyLinkedListIterator { item: self.head.as_ref().map(NodeLink::clone) }
   }
 
+  /// Returns a head of the list. `None` if list has 0 elements.
   fn head(&self) -> Option<NodeLink> {
     self.head.clone()
   }
 
+  /// Returns a tail of the list. `None` if list has 0 elements.
   fn tail(&self) -> Option<NodeLink> {
     self.tail.clone()
   }
 
+  /// Adds element to an end of the list
   fn push_back(&mut self, value: &str) -> NodeLink {
     let new_tail = if let Some(ref mut old_tail) = self.tail {
       old_tail.create_after(value)
@@ -196,6 +218,34 @@ impl DoublyLinkedList {
       self.head = None;
     }
     value
+  }
+
+  fn remove(&mut self, target: &NodeLink) {
+    match (target.ptr_eq_and_present(&self.head), target.ptr_eq_and_present(&self.tail)) {
+      (true, true) => {
+        self.head = None;
+        self.tail = None;
+      },
+      (true, false) => {
+        let new_head = target.next_link().unwrap();
+        new_head.borrow_mut().prev = Weak::new();
+        self.head = Some(new_head);
+      },
+      (false, true) => {
+        let new_tail = target.upgrade_prev().unwrap();
+        new_tail.borrow_mut().next = None;
+        self.tail = Some(new_tail);
+      },
+      (false, false) => {
+        let prev = target.upgrade_prev().unwrap();
+        let next = target.next_link().unwrap();
+
+        next.borrow_mut().prev = prev.weak();
+        prev.borrow_mut().next = Some(next);
+      }
+    }
+    target.borrow_mut().next = None;
+    target.borrow_mut().prev = Weak::new();
   }
 
   /// Returns length of a list
@@ -379,10 +429,20 @@ mod tests {
     assert_eq!("Brave new world", list_as_string(&list, " "));
   }
 
-  // #[test]
-  // fn push_before_updates_root() {
-  //   let mut
-  // }
+  #[test]
+  fn remove_node() {
+    let mut list = DoublyLinkedList::new();
+    list.push_back("foo");
+    let target = list.push_back("bar");
+    list.push_back("baz");
+
+    list.remove(&target);
+    assert_eq!(2, list.len());
+    assert_eq!("foo, baz", list_as_string(&list, ", "));
+
+    assert_eq!(Some("foo".to_string()), list.pop_front());
+    assert_eq!(Some("baz".to_string()), list.pop_back());
+  }
 
   #[test]
   fn check_rc_links_count() {
