@@ -3,7 +3,6 @@ extern crate clap;
 pub mod linear_counter;
 pub mod stream_summary;
 pub mod double_linked_list;
-pub mod list;
 
 use clap::{Arg, App};
 use std::io;

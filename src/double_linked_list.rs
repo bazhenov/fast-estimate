@@ -2,9 +2,9 @@ use std::cell::{Ref, RefMut};
 use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 
-struct NodeLink<T>(Rc<RefCell<Node<T>>>);
-
 type Link<T> = Option<NodeLink<T>>;
+
+pub struct NodeLink<T>(Rc<RefCell<Node<T>>>);
 
 /// Double linked list.
 ///
@@ -28,6 +28,10 @@ pub struct DoublyLinkedList<T> {
 
   head: Link<T>,
   tail: Link<T>
+}
+
+pub struct DoublyLinkedListIterator<T> {
+  item: Option<NodeLink<T>>
 }
 
 struct Node<T> {
@@ -57,14 +61,6 @@ impl<T: Clone> NodeLink<T> {
 
   fn weak(&self) -> Weak<RefCell<Node<T>>> {
     Rc::downgrade(&self.0)
-  }
-
-  fn next(&self) -> Option<NodeLink<T>> {
-    self.borrow().next.as_ref().map(NodeLink::clone)
-  }
-
-  fn update_backward_link(&self, node: &NodeLink<T>) {
-    self.borrow_mut().prev = node.weak();
   }
 
   fn link_to(&self, successor: &NodeLink<T>) {
@@ -100,10 +96,6 @@ impl<T: Clone> NodeLink<T> {
     self.0.borrow().prev.upgrade().map(Self)
   }
 
-  fn ptr_eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.0, &other.0)
-  }
-
   fn ptr_eq_and_present(&self, other: &Option<Self>) -> bool {
     if let Some(ref node) = other {
       return Rc::ptr_eq(&self.0, &node.0);
@@ -122,26 +114,26 @@ impl<T> Clone for NodeLink<T> {
 impl<T: Clone> DoublyLinkedList<T> {
 
   /// Creates new list
-  fn new() -> Self {
+  pub fn new() -> Self {
     DoublyLinkedList { head: None, tail: None }
   }
 
-  fn iter(&self) -> DoublyLinkedListIterator<T> {
+  pub fn iter(&self) -> DoublyLinkedListIterator<T> {
     DoublyLinkedListIterator { item: self.head.as_ref().map(NodeLink::clone) }
   }
 
   /// Returns a head of the list. `None` if list has 0 elements.
-  fn head(&self) -> Option<NodeLink<T>> {
+  pub fn head(&self) -> Option<NodeLink<T>> {
     self.head.clone()
   }
 
   /// Returns a tail of the list. `None` if list has 0 elements.
-  fn tail(&self) -> Option<NodeLink<T>> {
+  pub fn tail(&self) -> Option<NodeLink<T>> {
     self.tail.clone()
   }
 
   /// Adds element to an end of the list
-  fn push_back(&mut self, value: &T) -> NodeLink<T> {
+  pub fn push_back(&mut self, value: &T) -> NodeLink<T> {
     let new_tail = if let Some(ref mut old_tail) = self.tail {
       old_tail.create_after(value)
     } else {
@@ -153,7 +145,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     new_tail
   }
 
-  fn push_front(&mut self, value: &T) -> NodeLink<T> {
+  pub  fn push_front(&mut self, value: &T) -> NodeLink<T> {
     let new_head = if let Some(ref mut old_head) = self.head  {
       old_head.create_before(value)
     } else {
@@ -166,7 +158,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     new_head
   }
 
-  fn push_after(&mut self, node: &NodeLink<T>, value: &T) -> NodeLink<T> {
+  pub fn push_after(&mut self, node: &NodeLink<T>, value: &T) -> NodeLink<T> {
     let new = node.create_after(value);
 
     // Updating tail if pushing after last element of a list
@@ -177,7 +169,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     new
   }
 
-  fn push_before(&mut self, node: &NodeLink<T>, value: &T) -> NodeLink<T> {
+  pub  fn push_before(&mut self, node: &NodeLink<T>, value: &T) -> NodeLink<T> {
     let new = node.create_before(value);
 
     // Updates head if pushing before first element in a list
@@ -188,7 +180,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     new
   }
 
-  fn pop_front(&mut self) -> Option<T> {
+  pub  fn pop_front(&mut self) -> Option<T> {
     let (value, new_head) = if let Some(ref old_head) = self.head {
       (Some(old_head.borrow().data.clone()), old_head.next_link())
     } else {
@@ -204,7 +196,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     value
   }
 
-  fn pop_back(&mut self) -> Option<T> {
+  pub fn pop_back(&mut self) -> Option<T> {
     let (value, new_tail) = if let Some(ref old_tail) = self.tail {
       (Some(old_tail.borrow().data.clone()), old_tail.upgrade_prev())
     } else {
@@ -220,7 +212,7 @@ impl<T: Clone> DoublyLinkedList<T> {
     value
   }
 
-  fn remove(&mut self, target: &NodeLink<T>) {
+  pub fn remove(&mut self, target: &NodeLink<T>) {
     match (target.ptr_eq_and_present(&self.head), target.ptr_eq_and_present(&self.tail)) {
       (true, true) => {
         self.head = None;
@@ -258,10 +250,6 @@ impl<T: Clone> DoublyLinkedList<T> {
   pub fn len(&self) -> usize {
     self.iter().count()
   }
-}
-
-struct DoublyLinkedListIterator<T> {
-  item: Option<NodeLink<T>>
 }
 
 impl<T: Clone> Iterator for DoublyLinkedListIterator<T> {
