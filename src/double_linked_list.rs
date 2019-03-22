@@ -212,6 +212,10 @@ impl<T: Clone> DoublyLinkedList<T> {
     value
   }
 
+  pub fn empty(&self) -> bool {
+    self.head.is_none()
+  }
+
   pub fn remove(&mut self, target: &NodeLink<T>) {
     match (target.ptr_eq_and_present(&self.head), target.ptr_eq_and_present(&self.tail)) {
       (true, true) => {
@@ -460,6 +464,7 @@ mod tests {
 
   fn assert_empty(list: &mut DoublyLinkedList<&str>) {
     assert_eq!(0, list.len());
+    assert_eq!(true, list.empty());
     assert_eq!(None, list.pop_front());
     assert_eq!(None, list.pop_back());
     assert!(list.head().is_none());

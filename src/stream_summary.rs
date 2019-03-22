@@ -1,34 +1,31 @@
-use std::rc::{Rc, Weak};
 use std::collections::{HashMap};
-use std::cell::RefCell;
 use double_linked_list::{DoublyLinkedList, NodeLink};
 
 /// Stream Summary structure
 #[allow(dead_code)]
 pub struct StreamSummary {
-  monitored_items: HashMap<String, Rc<Item>>,
+  monitored_items: HashMap<String, Item>,
   buckets: HashMap<u32, DoublyLinkedList<String>>
 }
 
 #[allow(dead_code)]
 pub struct Item {
   data: String,
-  //bucket_node: NodeLink<String>,
+  bucket_node: NodeLink<String>,
   epsilon: u32,
   count: u32
 }
 
 impl Item {
 
-  pub fn new(data: &str) -> Item {
-    let item = Item {
+  fn new(data: &str, node: NodeLink<String>) -> Self {
+    Item {
       data: data.to_string(),
       epsilon: 0,
+      bucket_node: node,
       count: 0
-    };
-    item
+    }
   }
-
 }
 
 impl StreamSummary {
@@ -44,7 +41,42 @@ impl StreamSummary {
     vec![]
   }
 
-  pub fn offer(&mut self, _data: &str) -> u32 {
+  fn push_item_to_bucket(buckets: &mut HashMap<u32, DoublyLinkedList<String>>, bucket: u32, data: &String) -> NodeLink<String> {
+    if !buckets.contains_key(&bucket) {
+      buckets.insert(bucket, DoublyLinkedList::new());
+    }
+
+    let bucket = buckets.get_mut(&bucket).expect("Illegal state");
+    bucket.push_back(data)
+  }
+
+  pub fn offer(&mut self, data: &str) -> u32 {
+    if self.monitored_items.contains_key(data) {
+      let item = self.monitored_items.get_mut(data).unwrap();
+      let count = item.count;
+      let next_count = count + 1;
+      item.count = next_count;
+
+      // Removing item from current bucket
+      let last_element_in_bucket = {
+        let bucket = self.buckets.get_mut(&count).expect("Illegal state");
+        bucket.remove(&item.bucket_node);
+        bucket.empty()
+      };
+      if last_element_in_bucket {
+        self.buckets.remove(&count);
+      }
+
+      // Adding item to the next bucket
+      item.bucket_node = Self::push_item_to_bucket(&mut self.buckets, next_count, &item.data);
+
+    } else {
+      // Pusing
+      let node = Self::push_item_to_bucket(&mut self.buckets, 1, &data.to_string());
+      let item = Item::new(data, node);
+      self.monitored_items.insert(data.to_string(), item);
+    }
+
     0
   }
 }
