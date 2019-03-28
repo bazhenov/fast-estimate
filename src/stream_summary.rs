@@ -1,19 +1,32 @@
-use std::collections::{HashMap};
+use std::collections::{HashMap, BTreeMap};
 use double_linked_list::{DoublyLinkedList, NodeLink};
 
+type BucketMap = BTreeMap<usize, DoublyLinkedList<String>>;
+
 /// Stream Summary structure
-#[allow(dead_code)]
 pub struct StreamSummary {
   monitored_items: HashMap<String, Item>,
-  buckets: HashMap<u32, DoublyLinkedList<String>>
+  buckets: BucketMap,
+  capacity: usize
 }
 
-#[allow(dead_code)]
 pub struct Item {
   data: String,
   bucket_node: NodeLink<String>,
-  epsilon: u32,
-  count: u32
+  epsilon: usize,
+  count: usize
+}
+
+impl Clone for Item {
+
+  fn clone(&self) -> Self {
+    Item {
+      data: self.data.clone(),
+      bucket_node: self.bucket_node.clone(),
+      epsilon: self.epsilon,
+      count: self.count
+    }
+  }
 }
 
 impl Item {
@@ -30,25 +43,34 @@ impl Item {
 
 impl StreamSummary {
 
-  pub fn new() -> StreamSummary {
-    return StreamSummary {
-      monitored_items: HashMap::new(),
-      buckets: HashMap::new()
-    };
+  pub fn new() -> Self {
+    Self::with_capacity(1000)
   }
 
-  pub fn estimate_top(&self) -> Vec<Item> {
-    vec![]
+  pub fn with_capacity(capacity: usize) -> Self {
+    Self {
+      monitored_items: HashMap::with_capacity(capacity),
+      buckets: BTreeMap::new(),
+      capacity: capacity
+    }
   }
 
-  fn push_item_to_bucket(buckets: &mut HashMap<u32, DoublyLinkedList<String>>, bucket: u32, data: &String) -> NodeLink<String> {
+  pub fn estimate_top(&self) -> Vec<&Item> {
+    let mut top : Vec<&Item> = self.monitored_items.values().collect();
+
+    top.sort_unstable_by(|a, b| b.count.cmp(&a.count));
+    top
+  }
+
+  fn push_item_to_bucket(buckets: &mut BucketMap, bucket: usize, data: &String) -> NodeLink<String> {
     buckets.entry(bucket)
       .or_insert_with(DoublyLinkedList::new)
       .push_back(data)
   }
 
-  pub fn offer(&mut self, data: &str) -> u32 {
-    let new_count = if self.monitored_items.contains_key(data) {
+  pub fn offer(&mut self, data: &str) -> usize {
+    if self.monitored_items.contains_key(data) {
+      // Incrementing count on exisiting element
       let item = self.monitored_items.get_mut(data).unwrap();
       let count = item.count;
       let next_count = count + 1;
@@ -67,18 +89,32 @@ impl StreamSummary {
       // Adding item to the next bucket
       item.bucket_node = Self::push_item_to_bucket(&mut self.buckets, next_count, &item.data);
 
-      next_count
+      return next_count;
 
     } else {
-      // Pusing
-      let node = Self::push_item_to_bucket(&mut self.buckets, 1, &data.to_string());
-      let item = Item::new(data, node);
-      self.monitored_items.insert(data.to_string(), item);
+      if self.monitored_items.len() >= self.capacity {
+        // Replacing exisiting element
+        let min_bucket = *self.buckets.keys().min().unwrap();
+        let node = self.buckets.get_mut(&min_bucket).unwrap()
+          .pop_front().unwrap();
+        let item = self.monitored_items.remove(&node).unwrap();
 
-      1
+        let new_count = item.count + 1;
+        let new_epsilon = item.epsilon + 1;
+        let new_node = Self::push_item_to_bucket(&mut self.buckets, new_count, &data.to_string());
+        let item = Item {data: data.to_string(), bucket_node: new_node, epsilon: new_epsilon, count: new_count};
+        self.monitored_items.insert(data.to_string(), item);
+
+        return 1;
+      } else {
+        // Pushing new element
+        let node = Self::push_item_to_bucket(&mut self.buckets, 1, &data.to_string());
+        let item = Item::new(data, node);
+        self.monitored_items.insert(data.to_string(), item);
+
+        return 1;
+      }
     };
-
-    new_count
   }
 }
 
@@ -91,6 +127,49 @@ mod tests {
   fn shound() {
     let s = StreamSummary::new();
     assert_eq!(0, s.estimate_top().len());
+  }
+
+  #[test]
+  fn should_export_top_1() {
+    let mut s = StreamSummary::new();
+    s.offer("Hello");
+    let top = s.estimate_top();
+    assert_eq!(1, top.len());
+    assert_eq!("Hello", top[0].data);
+  }
+
+  #[test]
+  fn should_export_top_2() {
+    let mut s = StreamSummary::new();
+    s.offer("Hello");
+
+    s.offer("world");
+    s.offer("world");
+
+    assert_eq!(vec!["world", "Hello"], top_items(&s));
+  }
+
+  #[test]
+  fn export_less_than_visited() {
+    let mut s = StreamSummary::with_capacity(2);
+
+    offer(3, &mut s, "foo");
+    offer(2, &mut s, "bar");
+    offer(1, &mut s, "baz");
+
+    assert_eq!(vec!("bar", "baz"), top_items(&s));
+  }
+
+  fn offer(n: usize, s: &mut StreamSummary, data: &str) {
+    for _ in 0..n {
+      s.offer(data);
+    }
+  }
+
+  fn top_items(summary: &StreamSummary) -> Vec<&String> {
+    summary.estimate_top().iter()
+      .map(|i| &i.data)
+      .collect()
   }
 
   #[test]
