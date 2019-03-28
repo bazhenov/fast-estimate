@@ -23,7 +23,7 @@ impl Item {
       data: data.to_string(),
       epsilon: 0,
       bucket_node: node,
-      count: 0
+      count: 1
     }
   }
 }
@@ -42,16 +42,13 @@ impl StreamSummary {
   }
 
   fn push_item_to_bucket(buckets: &mut HashMap<u32, DoublyLinkedList<String>>, bucket: u32, data: &String) -> NodeLink<String> {
-    if !buckets.contains_key(&bucket) {
-      buckets.insert(bucket, DoublyLinkedList::new());
-    }
-
-    let bucket = buckets.get_mut(&bucket).expect("Illegal state");
-    bucket.push_back(data)
+    buckets.entry(bucket)
+      .or_insert_with(DoublyLinkedList::new)
+      .push_back(data)
   }
 
   pub fn offer(&mut self, data: &str) -> u32 {
-    if self.monitored_items.contains_key(data) {
+    let new_count = if self.monitored_items.contains_key(data) {
       let item = self.monitored_items.get_mut(data).unwrap();
       let count = item.count;
       let next_count = count + 1;
@@ -70,14 +67,18 @@ impl StreamSummary {
       // Adding item to the next bucket
       item.bucket_node = Self::push_item_to_bucket(&mut self.buckets, next_count, &item.data);
 
+      next_count
+
     } else {
       // Pusing
       let node = Self::push_item_to_bucket(&mut self.buckets, 1, &data.to_string());
       let item = Item::new(data, node);
       self.monitored_items.insert(data.to_string(), item);
-    }
 
-    0
+      1
+    };
+
+    new_count
   }
 }
 
@@ -94,9 +95,9 @@ mod tests {
 
   #[test]
   fn should_count_occurrences_correctly() {
-    //let mut s = StreamSummary::new();
-    // for i in 0..10 {
-    //   assert_eq!(i + 1, s.offer("Hello"));
-    // }
+    let mut s = StreamSummary::new();
+    for i in 0..10 {
+      assert_eq!(i + 1, s.offer("Hello"));
+    }
   }
 }
