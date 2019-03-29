@@ -3,7 +3,26 @@ use double_linked_list::{DoublyLinkedList, NodeLink};
 
 type BucketMap = BTreeMap<usize, DoublyLinkedList<String>>;
 
-/// Stream Summary structure
+/// Stream Summary structure.
+///
+/// Stream summary algorithm originally described in paper:
+/// <a href="http://www.cse.ust.hk/~raywong/comp5331/References/EfficientComputationOfFrequentAndTop-kElementsInDataStreams.pdf">
+/// Efficient Computation of Frequent and Top-k Elements in Data Streams</a>. It allows
+/// estimate top-k elements in a stream storing only constant number of elements in a memory.
+///
+/// # Examples
+/// ```
+/// let mut stream  = StreamSummary::new();
+///
+/// stream.offer("hello");
+/// stream.offer("hello");
+/// stream.offer("world");
+///
+/// let top = stream.estimate_top();
+///
+/// assert_eq("hello", top[0].data);
+/// assert_eq(2, top[0].count);
+/// ```
 pub struct StreamSummary {
   monitored_items: HashMap<String, Item>,
   buckets: BucketMap,

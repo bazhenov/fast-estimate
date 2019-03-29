@@ -212,6 +212,9 @@ impl<T: Clone> DoublyLinkedList<T> {
     value
   }
 
+  /// Returns `true` if list is empty.
+  ///
+  /// Comparing to `len()` method, `empty()` is `O(1)` in complexity.
   pub fn empty(&self) -> bool {
     self.head.is_none()
   }
@@ -244,7 +247,8 @@ impl<T: Clone> DoublyLinkedList<T> {
     target.borrow_mut().prev = Weak::new();
   }
 
-  /// Returns length of a list
+  /// Returns length of a list. This is `O(n)` operation and at the moment is iterating over the elements
+  /// of a list.
   ///
   /// ```rust
   /// let mut list = DoublyLinkedList::new();
