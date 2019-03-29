@@ -157,7 +157,7 @@ mod tests {
     offer(2, &mut s, "bar");
     offer(1, &mut s, "baz");
 
-    assert_eq!(vec!("bar", "baz"), top_items(&s));
+    assert_eq!(vec!("foo", "baz"), top_items(&s));
   }
 
   fn offer(n: usize, s: &mut StreamSummary, data: &str) {
