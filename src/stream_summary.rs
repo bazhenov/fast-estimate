@@ -58,7 +58,7 @@ impl StreamSummary {
   pub fn estimate_top(&self) -> Vec<&Item> {
     let mut top : Vec<&Item> = self.monitored_items.values().collect();
 
-    top.sort_by(|a, b| b.count.cmp(&a.count));
+    top.sort_unstable_by(|a, b| b.count.cmp(&a.count));
     top
   }
 
@@ -77,12 +77,12 @@ impl StreamSummary {
       item.count = next_count;
 
       // Removing item from current bucket
-      let last_element_in_bucket = {
+      let should_remove_bucket = {
         let bucket = self.buckets.get_mut(&count).expect("Illegal state");
         bucket.remove(&item.bucket_node);
         bucket.empty()
       };
-      if last_element_in_bucket {
+      if should_remove_bucket {
         self.buckets.remove(&count);
       }
 
@@ -94,10 +94,17 @@ impl StreamSummary {
     } else {
       if self.monitored_items.len() >= self.capacity {
         // Replacing exisiting element
-        let min_bucket = *self.buckets.keys().min().unwrap();
-        let node = self.buckets.get_mut(&min_bucket).unwrap()
-          .pop_front().unwrap();
-        let item = self.monitored_items.remove(&node).unwrap();
+        let min_bucket = *self.buckets.keys().min().expect("No element in visited items found");
+
+        let (item, should_remove_bucket) = {
+          let bucket = self.buckets.get_mut(&min_bucket).expect("No bucket found!");
+          let node = bucket.pop_front().expect("No element in a bucket found!");
+          (self.monitored_items.remove(&node).unwrap(), bucket.empty())
+        };
+
+        if should_remove_bucket {
+          self.buckets.remove(&min_bucket);
+        }
 
         let new_count = item.count + 1;
         let new_epsilon = item.epsilon + 1;
