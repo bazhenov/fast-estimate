@@ -11,10 +11,10 @@ pub struct StreamSummary {
 }
 
 pub struct Item {
-  data: String,
+  pub data: String,
   bucket_node: NodeLink<String>,
-  epsilon: usize,
-  count: usize
+  pub epsilon: usize,
+  pub count: usize
 }
 
 impl Clone for Item {
@@ -58,7 +58,7 @@ impl StreamSummary {
   pub fn estimate_top(&self) -> Vec<&Item> {
     let mut top : Vec<&Item> = self.monitored_items.values().collect();
 
-    top.sort_unstable_by(|a, b| b.count.cmp(&a.count));
+    top.sort_by(|a, b| b.count.cmp(&a.count));
     top
   }
 
@@ -158,6 +158,15 @@ mod tests {
     offer(1, &mut s, "baz");
 
     assert_eq!(vec!("foo", "baz"), top_items(&s));
+  }
+
+  #[test]
+  fn replace_values() {
+    let mut s = StreamSummary::with_capacity(2);
+
+    for i in 1..100 {
+      s.offer(&i.to_string());
+    }
   }
 
   fn offer(n: usize, s: &mut StreamSummary, data: &str) {
