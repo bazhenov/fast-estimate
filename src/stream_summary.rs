@@ -179,7 +179,7 @@ mod tests {
   fn export_less_than_visited() {
     let mut s = StreamSummary::with_capacity(2);
 
-    offer(3, &mut s, "foo");
+    offer(4, &mut s, "foo");
     offer(2, &mut s, "bar");
     offer(1, &mut s, "baz");
 
